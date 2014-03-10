@@ -53,12 +53,18 @@ function sine_fit_strain(filename)
     detrend_bot = bot_strain-bg_bot;
     
     % Guess amplitudes
-    top_nom_amp = (sqrt(mean(detrend_top.^2))*sqrt(2))/3.0
-    bot_nom_amp = (sqrt(mean(detrend_bot.^2))*sqrt(2))/3.0
+    top_nom_amp = (sqrt(mean(detrend_top.^2))*sqrt(2));
+    bot_nom_amp = (sqrt(mean(detrend_bot.^2))*sqrt(2));
+    
+    % Guess the phase shift
+    top_nom_phase = nominal_phase(time, detrend_top, nom_period, ...
+        top_nom_amp);
+    bot_nom_phase = nominal_phase(time, detrend_bot, nom_period, ...
+        bot_nom_amp);
     
     % Fit sine coeffs for two models allowing different periods...
     % FIXME - again this should be a function
-    sine_coef_top = fminsearch(@sine_misfit, [nom_period top_nom_amp 0.0001], ...
+    sine_coef_top = fminsearch(@sine_misfit, [nom_period top_nom_amp top_nom_phase], ...
         minimise_options, time, detrend_top);
     sine_top = sine_model(time, sine_coef_top(1), sine_coef_top(2),...
         sine_coef_top(3));
@@ -69,7 +75,7 @@ function sine_fit_strain(filename)
         ' phase = %6.2g\n'], period_top, amplitude_top, phase_top);
     
     
-    sine_coef_bot = fminsearch(@sine_misfit, [nom_period bot_nom_amp 0.0001], ...
+    sine_coef_bot = fminsearch(@sine_misfit, [nom_period bot_nom_amp bot_nom_phase], ...
         minimise_options, time, detrend_bot);
     sine_bot = sine_model(time, sine_coef_bot(1), sine_coef_bot(2),...
        sine_coef_bot(3));
@@ -131,6 +137,23 @@ function sine_fit_strain(filename)
     xlabel('Timestamp (s)')
     ylabel('Displacment (px)')
     
+end
+
+function [best_phase] = nominal_phase(time, data, period, amplitude)
+
+    best_phase = 0;
+    best_sum_sq = 10000;
+    num_phase = 20;
+    for i = 1:num_phase
+        phase_guess = (i/num_phase)*period;
+        model = sine_model (time, period, amplitude, phase_guess);
+        sum_sq = sum((model - data).^2);
+        if (sum_sq < best_sum_sq)
+            best_phase = phase_guess;
+            best_sum_sq = sum_sq;
+        end
+    end
+
 end
 
 function [sum_sq] = model_misfit_both(coeff, times, data)
