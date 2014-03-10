@@ -34,10 +34,6 @@ function [image1, image2, time, box1, box2, box3, metadata] ...
     posline4 = fgetl(fid);
     fgetl(fid); % Blank line
     
-    tok = regexp(posline1, 'top,\s+(\d+),\s+(\d+),\s+(\d+)', 'tokens');
-    tops = [str2double(tok{1}{1}) str2double(tok{1}{2}) str2double(tok{1}{3})];
-    
-    
     % Fill in the metadata - FIXME: needs finishing
     tok = regexp(posline1, 'top,\s+(\d+),\s+(\d+),\s+(\d+)', 'tokens');
     tops = [str2double(tok{1}{1}) str2double(tok{1}{2}) str2double(tok{1}{3})];
@@ -47,10 +43,21 @@ function [image1, image2, time, box1, box2, box3, metadata] ...
     lefts = [str2double(tok{1}{1}) str2double(tok{1}{2}) str2double(tok{1}{3})];
     tok = regexp(posline4, 'right,\s+(\d+),\s+(\d+),\s+(\d+)', 'tokens');
     rights = [str2double(tok{1}{1}) str2double(tok{1}{2}) str2double(tok{1}{3})];
+    
+    tok = regexp(filename, '(\w+\d+)_(\d+)tons_(\d+)C_(\d+)s_', 'tokens');
+    expt_name = tok{1}{1};
+    nominal_load = str2double(tok{1}{2});
+    nominal_temperature = str2double(tok{1}{3});
+    nominal_period = str2double(tok{1}{4});
+    
     metadata = struct('InputFile', in_file_line, ...
                       'AnalysisBy', ab_by_line, ...
                       'BoxTops', tops, 'BoxBotoms', bots, ...
-                      'BoxLefts', lefts, 'BoxRights', rights);
+                      'BoxLefts', lefts, 'BoxRights', rights, ...
+                      'ExperimentName', expt_name, ...
+                      'NominalLoad', nominal_load, ...
+                      'NominalTemp', nominal_temperature, ...
+                      'NominalPeriod', nominal_period);
    
     % Read all the data and 
     data = fscanf(fid, '%f, %f, %f, %f, %f, %f', [6 inf]);

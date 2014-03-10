@@ -1,6 +1,6 @@
 
 
-function calc_strains(filename)
+function sine_fit_strain(filename)
 
     % Options - FIXME: should be optional input arguments. 
     minimise_options = optimset('Display', 'final', 'TolX', 1e-9, 'Tolfun', 1e-9);
@@ -21,6 +21,9 @@ function calc_strains(filename)
                      (metadata.BoxTops(2)+metadata.BoxBotoms(2))/2.0;               
     bot_ref_length = (metadata.BoxTops(2)+metadata.BoxBotoms(2))/2.0 + ...
                      (metadata.BoxTops(3)+metadata.BoxBotoms(3))/2.0;
+                 
+    % Get the nominal period for fitting with
+    nom_period = metadata.NominalPeriod;
               
     % Calculate strain of top and bottom block, at each time step.             
     top_strain = (box2 - box1) / top_ref_length;
@@ -49,9 +52,13 @@ function calc_strains(filename)
     bg_bot = background_model(time, a_bot, b_bot, c_bot);
     detrend_bot = bot_strain-bg_bot;
     
+    % Guess amplitudes
+    top_nom_amp = (sqrt(mean(detrend_top.^2))*sqrt(2))/3.0
+    bot_nom_amp = (sqrt(mean(detrend_bot.^2))*sqrt(2))/3.0
+    
     % Fit sine coeffs for two models allowing different periods...
     % FIXME - again this should be a function
-    sine_coef_top = fminsearch(@sine_misfit, [100.0 1E-4 0.0001], ...
+    sine_coef_top = fminsearch(@sine_misfit, [nom_period top_nom_amp 0.0001], ...
         minimise_options, time, detrend_top);
     sine_top = sine_model(time, sine_coef_top(1), sine_coef_top(2),...
         sine_coef_top(3));
@@ -62,7 +69,7 @@ function calc_strains(filename)
         ' phase = %6.2g\n'], period_top, amplitude_top, phase_top);
     
     
-    sine_coef_bot = fminsearch(@sine_misfit, [100.0 1E-5 0.0001], ...
+    sine_coef_bot = fminsearch(@sine_misfit, [nom_period bot_nom_amp 0.0001], ...
         minimise_options, time, detrend_bot);
     sine_bot = sine_model(time, sine_coef_bot(1), sine_coef_bot(2),...
        sine_coef_bot(3));
