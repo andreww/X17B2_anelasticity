@@ -30,27 +30,10 @@ function sine_fit_strain(filename)
     bot_strain = (box3 - box2) / bot_ref_length;
 
     % Detrend the data and calculate detrended strains
-    % FIXME - this should be two calls to a fnction
-    fprintf('Detrending the data with a quadratic fit...\n');
-    bg_coef_top = fminsearch(@background_misfit, [0.0 0.0 0.0], ...
-        minimise_options, time, top_strain);
-    a_top = bg_coef_top(1);
-    b_top = bg_coef_top(2);
-    c_top = bg_coef_top(3);
-    fprintf('Best fit background for top strains a = %6.2g b = %6.2g c = %6.2g\n',...
-        a_top, b_top, c_top);
-    bg_top = background_model(time, a_top, b_top, c_top);
-    detrend_top = top_strain-bg_top;
-    
-    bg_coef_bot = fminsearch(@background_misfit, [0.0 0.0 0.0], ...
-       minimise_options, time, bot_strain);
-    a_bot = bg_coef_bot(1);
-    b_bot = bg_coef_bot(2);
-    c_bot = bg_coef_bot(3);
-    fprintf('Best fit background for bottom strains a = %6.2g b = %6.2g c = %6.2g\n',...
-        a_bot, b_bot, c_bot);
-    bg_bot = background_model(time, a_bot, b_bot, c_bot);
-    detrend_bot = bot_strain-bg_bot;
+    [detrend_top, bg_top, ~] = detrend_data(time, top_strain, 'verbose', ...
+        'minimise_options', minimise_options, 'name', 'top data');
+    [detrend_bot, bg_bot, ~] = detrend_data(time, bot_strain, 'verbose', ...
+        'minimise_options', minimise_options, 'name', 'bottom data');
     
     % Guess amplitudes
     top_nom_amp = (sqrt(mean(detrend_top.^2))*sqrt(2));
@@ -217,15 +200,7 @@ function [sum_sq] = model_misfit(coeff, times, data)
 
 end
 
-function [sum_sq] = background_misfit(coeff, times, data)
 
-    a = coeff(1);
-    b = coeff(2);
-    c = coeff(3);
-    
-    sum_sq = sum((background_model(times, a, b, c) - data).^2);
-
-end
 
 function [sum_sq] = sine_misfit(coeff, times, data)
 
@@ -243,13 +218,6 @@ function [background_sine_data] = background_sine_model(times, period, ...
     background_sine_data = sine_model(times, period, amplitude, ...
         phase) + background_model(times, a, b, c);
     
-end
-
-function [background_data] = background_model(times, a, b, c)
-
-    % times in seconds, a, b and c in px, px/sec and px/sec^2
-    background_data = a.*times.^2 + b.*times + c;
-
 end
 
 function [ sine_data ] = sine_model (times, period, amplitude, phase)
