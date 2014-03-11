@@ -66,6 +66,18 @@ function [detrended_data, trend, params] = detrend_data(time, data, ...
             end
             trend = quadratic_model(time, params(1), ...
                 params(2), params(3));
+            
+        case 'linear'
+            params = fminsearch(@linear_misfit, [0.0 0.0 0.0], ...
+                minimise_options, time, data);
+            % FIXME - check fit worked...            
+            if verbose
+                fprintf(['Best fit to function y = ax+b is: \n'...
+                    '    a = %6.2g b = %6.2g\n\n'],...
+                    params(1), params(2));
+            end
+            trend = linear_model(time, params(1), params(2));            
+            
         otherwise 
             error(['Unknown function in detrend_data: ' varargin{iarg}]);
     end
@@ -85,7 +97,23 @@ end
 
 function [background_data] = quadratic_model(times, a, b, c)
 
-    % times in seconds, a, b and c in px, px/sec and px/sec^2
+    % times in seconds, a, b and c in px/sec^2, px/sec and px
     background_data = a.*times.^2 + b.*times + c;
+
+end
+
+function [sum_sq] = linear_misfit(coeff, times, data)
+
+    a = coeff(1);
+    b = coeff(2);
+    
+    sum_sq = sum((linear_model(times, a, b) - data).^2);
+
+end
+
+function [background_data] = linear_model(times, a, b)
+
+    % times in seconds, a and b in px/sec and px 
+    background_data = a.*times + b;
 
 end
