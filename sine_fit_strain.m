@@ -120,33 +120,13 @@ function sine_fit_strain(filename)
     xlabel('Timestamp (s)')
     ylabel('Displacment (px)')
     
-    
-    % Now fit the kelvin model - elastic strain plus viscous strain
-    % Should probably put this elsewhere
-    
-    E = 350; % Youngs mod of elastic standard (Al2O3)
-    % Calculate stress in Al2O3
-    stresses = fitted_data_bot * E;
-    
-    maxwell_coef = fminsearch(@maxwell_model_misfit, ...
-        [E/2, 0.001], minimise_options, time, ...
-         detrend_top, stresses);
-    
-    maxwell_E = maxwell_coef(1);
-    maxwell_p = maxwell_coef(2);
-    fprintf(['Maxwell model: \n', ...
-        '    E standard / E sample = %6.3f \n' ...
-        '    viscosity = %6.3f \n'], ...
-        maxwell_E, maxwell_p);
-    fitted_maxwell_displacments = maxwell_model(time, stresses, maxwell_E, maxwell_p);
-    figure
-    subplot(1,1,1)
-    plot(time, detrend_top, '.g', time, fitted_maxwell_displacments, '-g');
-    legend('Measured strain', 'Viscoelastic strain');
-    xlabel('Timestamp (s)')
-    ylabel('Displacment (px)')
-    
-    
+    if 0
+    E_al2o3 = 350; % Youngs mod of elastic standard (Al2O3)
+    [~, ~] = fit_maxwell_model(time, ...
+    fitted_data_bot, E_al2o3, detrend_top, 'minimise_options',...
+    minimise_options);
+    end    
+
 end
 
 function [best_phase] = nominal_phase(time, data, period, amplitude)
@@ -225,28 +205,4 @@ function [ sine_data ] = sine_model (times, period, amplitude, phase)
     % phase and period in degrees, amp in px, times in seconds
     sine_data = sin(((times + phase)/period)*(2.0*pi)) * amplitude;
     
-end
-
-function [sum_sq] = maxwell_model_misfit(coeff, times, data, stress)
-
-    E = coeff(1);
-    p = coeff(2);
-    model_data = maxwell_model(times, stress, E, p);
-    sum_sq = sum((model_data - data).^2);
-    
-end
-
-function [elastic_displacment, plastic_displacement] = maxwell_model(times, ...
-    stress, elasticity, viscosity)
-
-    elastic_displacment = stress / elasticity;
-    plastic_rate = stress / viscosity;
-    plastic_displacement = zeros(size(times));
-    delta_times = zeros(size(times));
-    for i = 2:length(times)
-        delta_times(i) = times(i) - times(i-1);
-        plastic_displacement(i) = plastic_displacement(i-1) + ...
-            plastic_rate(i-1)*times(i);
-    end
-
 end
