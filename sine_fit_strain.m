@@ -1,6 +1,8 @@
 
 
-function sine_fit_strain(filename)
+function [nom_period, temperature, load,...
+    normalised_compliance, internal_friction] ...
+    = sine_fit_strain(filename)
 
     % Options - FIXME: should be optional input arguments. 
     minimise_options = optimset('Display', 'final', 'TolX', 1e-9, 'Tolfun', 1e-9);
@@ -26,6 +28,9 @@ function sine_fit_strain(filename)
     nom_period = metadata.NominalPeriod;
     assert(nom_period > 0, 'Error, nomimal period must be positive');
               
+    temperature = metadata.NominalTemp;
+    load = metadata.NominalLoad;
+    
     % Calculate strain of top and bottom block, at each time step.             
     top_strain = (box2 - box1) / top_ref_length;
     bot_strain = (box3 - box2) / bot_ref_length;
@@ -92,10 +97,14 @@ function sine_fit_strain(filename)
     amplitude_bot = sine_coef_both(3);
     phase_top = sine_coef_both(4);
     phase_bot = sine_coef_both(5);
-    fprintf(['Joint fit: period = %6.2g \n' ...
-        '    amplitude top = %6.2g phase top = %6.2g\n'...
-        '    amplitude bot = %6.2g phase bot = %6.2g\n'], ...
+    fprintf(['Joint fit: period = %6.4f \n' ...
+        '    amplitude top = %6.4f phase top = %6.4f\n'...
+        '    amplitude bot = %6.4f phase bot = %6.4f\n'], ...
         period, amplitude_top, phase_top, amplitude_bot, phase_bot);
+    
+    if ((abs(nom_period - period)/period) > 0.01)
+        warning('Nominal period and fitted period differ by > 1%');
+    end 
     
     % Draw a graph
     
@@ -142,6 +151,9 @@ function sine_fit_strain(filename)
     minimise_options);
     end    
 
+    normalised_compliance = amplitude_top / amplitude_bot;
+    internal_friction = (abs(phase_bot - phase_top)/period)*(2.0*pi);
+    
 end
 
 function [best_phase] = nominal_phase(time, data, period, amplitude)
