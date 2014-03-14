@@ -11,7 +11,7 @@ function sine_fit_strain(filename)
     
     time_zero = time(1);
     time = time - time_zero;
-    
+
     [~, name, ~] = fileparts(filename);
     name = strrep(name, '_', ' ');
     
@@ -24,11 +24,24 @@ function sine_fit_strain(filename)
                  
     % Get the nominal period for fitting with
     nom_period = metadata.NominalPeriod;
+    assert(nom_period > 0, 'Error, nomimal period must be positive');
               
     % Calculate strain of top and bottom block, at each time step.             
     top_strain = (box2 - box1) / top_ref_length;
     bot_strain = (box3 - box2) / bot_ref_length;
 
+    if 1
+    % Throw out first 10% of the data
+    s = floor(numel(time)/10);
+    e = numel(time);
+    unused_time = time(1:s-1);
+    unused_top_strain = top_strain(1:s-1);
+    unused_bot_strain = bot_strain(1:s-1);
+    time = time(s:e);
+    top_strain = top_strain(s:e);
+    bot_strain = bot_strain(s:e);
+    end
+    
     % Detrend the data and calculate detrended strains
     [detrend_top, bg_top, ~] = detrend_data(time, top_strain, 'verbose', ...
         'minimise_options', minimise_options, 'name', 'top data');
@@ -109,13 +122,15 @@ function sine_fit_strain(filename)
     
     figure
     subplot(2,1,1)
-    plot(time, top_strain, '.r', time, bg_top, '-r');
+    plot(time, top_strain, '.r', time, bg_top, '-r', ...
+        unused_time, unused_top_strain, 'or');
     legend('Zn sample data', 'Background');
     xlabel('Timestamp (s)')
     ylabel('Displacment (px)')
     
     subplot(2,1,2)
-    plot(time, bot_strain, '.b', time, bg_bot, '-b');
+    plot(time, bot_strain, '.b', time, bg_bot, '-b',...
+        unused_time, unused_bot_strain, 'ob');
     legend('Al2O3 sample data', 'Background');
     xlabel('Timestamp (s)')
     ylabel('Displacment (px)')
@@ -179,8 +194,6 @@ function [sum_sq] = model_misfit(coeff, times, data)
     sum_sq = sum(residuals.^2);
 
 end
-
-
 
 function [sum_sq] = sine_misfit(coeff, times, data)
 
