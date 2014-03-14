@@ -44,7 +44,8 @@ function [image1, image2, time, box1, box2, box3, metadata] ...
     tok = regexp(posline4, 'right,\s+(\d+),\s+(\d+),\s+(\d+)', 'tokens');
     rights = [str2double(tok{1}{1}) str2double(tok{1}{2}) str2double(tok{1}{3})];
     
-    tok = regexp(filename, '(\w+\d+)_(\d+)tons_(\d+)C_\d*p?_?(\d+)s_', 'tokens');
+    % \d*p?_?
+    tok = regexp(filename, '(\w+\d+)_(\d+)tons_(\d+)C_(\d+)s_', 'tokens');
     expt_name = tok{1}{1};
     nominal_load = str2double(tok{1}{2});
     nominal_temperature = str2double(tok{1}{3});
