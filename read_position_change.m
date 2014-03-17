@@ -46,11 +46,29 @@ function [image1, image2, time, box1, box2, box3, metadata] ...
     
     % \d*p?_?
     tok = regexp(filename, '(\w+\d+)_(\d+)tons_(\d+)C_(\d+)s_', 'tokens');
-    expt_name = tok{1}{1};
-    nominal_load = str2double(tok{1}{2});
-    nominal_temperature = str2double(tok{1}{3});
-    nominal_period = str2double(tok{1}{4});
-    
+    if (~isempty(tok))
+        expt_name = tok{1}{1};
+        nominal_load = str2double(tok{1}{2});
+        nominal_temperature = str2double(tok{1}{3});
+        nominal_period = str2double(tok{1}{4});
+        nominal_strain = 0.0;
+    else
+        tok = regexp(filename, '(\w+\d+)_(\d+)tons_(\d+)C_(\d+)p_(\d+)s_', 'tokens');
+        if (~isempty(tok))
+            expt_name = tok{1}{1};
+            nominal_load = str2double(tok{1}{2});
+            nominal_temperature = str2double(tok{1}{3});
+            nominal_period = str2double(tok{1}{5});
+            nominal_strain = str2double(tok{1}{4});
+        else
+            % Cannot parse file name!
+            expt_name = filename;
+            nominal_load = NaN;
+            nominal_temperature = NaN;
+            nominal_period = 30;
+            nominal_strain = NaN;
+        end
+    end
     metadata = struct('InputFile', in_file_line, ...
                       'AnalysisBy', ab_by_line, ...
                       'BoxTops', tops, 'BoxBotoms', bots, ...
@@ -58,7 +76,8 @@ function [image1, image2, time, box1, box2, box3, metadata] ...
                       'ExperimentName', expt_name, ...
                       'NominalLoad', nominal_load, ...
                       'NominalTemp', nominal_temperature, ...
-                      'NominalPeriod', nominal_period);
+                      'NominalPeriod', nominal_period, ...
+                      'NominalStrain', nominal_strain);
    
     % Read all the data and 
     data = fscanf(fid, '%f, %f, %f, %f, %f, %f', [6 inf]);
