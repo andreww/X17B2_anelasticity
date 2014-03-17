@@ -35,7 +35,7 @@ function [nom_period, temperature, load,...
     top_strain = (box2 - box1) / top_ref_length;
     bot_strain = (box3 - box2) / bot_ref_length;
 
-    if 1
+    if 0
     % Throw out first 10% of the data
     s = floor(numel(time)/10);
     e = numel(time);
@@ -45,6 +45,10 @@ function [nom_period, temperature, load,...
     time = time(s:e);
     top_strain = top_strain(s:e);
     bot_strain = bot_strain(s:e);
+    else
+        unused_time = [];
+        unused_top_strain = [];
+        unused_bot_strain = [];
     end
     
     % Detrend the data and calculate detrended strains
