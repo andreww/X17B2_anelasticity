@@ -72,8 +72,8 @@ function [nom_period, temperature, load,...
     period_top = sine_coef_top(1);
     amplitude_top = sine_coef_top(2);
     phase_top = sine_coef_top(3);
-    fprintf(['Sine fit for top data: period = %6.2g amplitude = %6.2g' ...
-        ' phase = %6.2g\n'], period_top, amplitude_top, phase_top);
+    fprintf(['Sine fit for top data: period = %6.4f amplitude = %6.4f' ...
+        ' phase = %6.4f\n'], period_top, amplitude_top, phase_top);
     
     
     sine_coef_bot = fminsearch(@sine_misfit, [nom_period bot_nom_amp bot_nom_phase], ...
@@ -83,8 +83,8 @@ function [nom_period, temperature, load,...
     period_bot = sine_coef_bot(1);
     amplitude_bot = sine_coef_bot(2);
     phase_bot = sine_coef_bot(3);
-    fprintf(['Sine fit for bottom data: period = %6.2g amplitude = %6.2g' ...
-        ' phase = %6.2g\n'], period_bot, amplitude_bot, phase_bot);
+    fprintf(['Sine fit for bottom data: period = %6.4f amplitude = %6.4f' ...
+        ' phase = %6.4f\n'], period_bot, amplitude_bot, phase_bot);
     
     % Now use theset to do a joint fit
     sine_coef_both = fminsearch(@model_misfit_both, ...
@@ -102,8 +102,11 @@ function [nom_period, temperature, load,...
         '    amplitude bot = %6.4f phase bot = %6.4f\n'], ...
         period, amplitude_top, phase_top, amplitude_bot, phase_bot);
     
+    period_error = 0;
     if ((abs(nom_period - period)/period) > 0.01)
-        warning('Nominal period and fitted period differ by > 1%');
+%         warning('SF:PD', ['Nominal period, %6.4f, and fitted'
+%             ' period, %6.4f, differ by > 1\%'], nom_period, period);
+        period_error = 1;    
     end 
     
     % Draw a graph
@@ -153,6 +156,23 @@ function [nom_period, temperature, load,...
 
     normalised_compliance = amplitude_top / amplitude_bot;
     internal_friction = (abs(phase_bot - phase_top)/period)*(2.0*pi);
+    if (internal_friction < 0)
+        % Something went wrong - elastic should not lag viscoelastic
+        %warning('SF:NP', ['Calculated phase offset, %6.4f'
+        %    ' is negative'], internal_friction);
+        internal_friction = NaN;
+        normalised_compliance = NaN;
+    elseif (internal_friction > pi/2.0)
+        % Something went wrong - maximum lag (pure viscosity) is 90 degrees
+        %warning('SF:BP', ['Calculated phase offset, %6.4f'
+        %    ' is more than 90 degrees'], internal_friction);
+        internal_friction = NaN;
+        normalised_compliance = NaN;
+    elseif (period_error)
+        internal_friction = NaN;
+        normalised_compliance = NaN;
+    end
+    
     
 end
 
