@@ -27,25 +27,38 @@ function [image1, image2, time, box1, box2, box3, metadata] ...
     ab_by_line = fgetl(fid);
     opts_line = fgetl(fid);
     fgetl(fid); % Blank line
-    fgetl(fid); % Table header line
+    table_head = fgetl(fid); % Table header line
     posline1 = fgetl(fid);
     posline2 = fgetl(fid);
     posline3 = fgetl(fid);
     posline4 = fgetl(fid);
     fgetl(fid); % Blank line
     
-    % Fill in the metadata - FIXME: needs finishing
-    tok = regexp(posline1, 'top,\s+(\d+),\s+(\d+),\s+(\d+)', 'tokens');
-    tops = [str2double(tok{1}{1}) str2double(tok{1}{2}) str2double(tok{1}{3})];
-    tok = regexp(posline2, 'bottom,\s+(\d+),\s+(\d+),\s+(\d+)', 'tokens');
-    bots = [str2double(tok{1}{1}) str2double(tok{1}{2}) str2double(tok{1}{3})];
-    tok = regexp(posline3, 'left,\s+(\d+),\s+(\d+),\s+(\d+)', 'tokens');
-    lefts = [str2double(tok{1}{1}) str2double(tok{1}{2}) str2double(tok{1}{3})];
-    tok = regexp(posline4, 'right,\s+(\d+),\s+(\d+),\s+(\d+)', 'tokens');
-    rights = [str2double(tok{1}{1}) str2double(tok{1}{2}) str2double(tok{1}{3})];
+    com = strfind(table_head, ',');
     
-    % \d*p?_?
-    tok = regexp(filename, '(\w+\d+)_(\d+)tons_(\d+)C_(\d+)s_', 'tokens');
+    % Fill in the metadata - FIXME: needs finishing
+    if length(com) == 5
+        tok = regexp(posline1, 'top,\s+(\d+),\s+(\d+),\s+(\d+)', 'tokens');
+        tops = [str2double(tok{1}{1}) str2double(tok{1}{2}) str2double(tok{1}{3})];
+        tok = regexp(posline2, 'bottom,\s+(\d+),\s+(\d+),\s+(\d+)', 'tokens');
+        bots = [str2double(tok{1}{1}) str2double(tok{1}{2}) str2double(tok{1}{3})];
+        tok = regexp(posline3, 'left,\s+(\d+),\s+(\d+),\s+(\d+)', 'tokens');
+        lefts = [str2double(tok{1}{1}) str2double(tok{1}{2}) str2double(tok{1}{3})];
+        tok = regexp(posline4, 'right,\s+(\d+),\s+(\d+),\s+(\d+)', 'tokens');
+        rights = [str2double(tok{1}{1}) str2double(tok{1}{2}) str2double(tok{1}{3})];
+    elseif length(com) == 6
+        % Fixme - should make use of the topmost foil too!
+        tok = regexp(posline1, 'top,\s+\d+,\s+(\d+),\s+(\d+),\s+(\d+)', 'tokens');
+        tops = [str2double(tok{1}{1}) str2double(tok{1}{2}) str2double(tok{1}{3})];
+        tok = regexp(posline2, 'bottom,\s+\d+,\s+(\d+),\s+(\d+),\s+(\d+)', 'tokens');
+        bots = [str2double(tok{1}{1}) str2double(tok{1}{2}) str2double(tok{1}{3})];
+        tok = regexp(posline3, 'left,\s+\d+,\s+(\d+),\s+(\d+),\s+(\d+)', 'tokens');
+        lefts = [str2double(tok{1}{1}) str2double(tok{1}{2}) str2double(tok{1}{3})];
+        tok = regexp(posline4, 'right,\s+\d+,\s+(\d+),\s+(\d+),\s+(\d+)', 'tokens');
+        rights = [str2double(tok{1}{1}) str2double(tok{1}{2}) str2double(tok{1}{3})];
+    end
+    
+    tok = regexp(filename, '(\w+_?\d+)_(\d+)tons_(\d+)C_(\d+)s_', 'tokens');
     if (~isempty(tok))
         expt_name = tok{1}{1};
         nominal_load = str2double(tok{1}{2});
@@ -53,7 +66,7 @@ function [image1, image2, time, box1, box2, box3, metadata] ...
         nominal_period = str2double(tok{1}{4});
         nominal_strain = 0.0;
     else
-        tok = regexp(filename, '(\w+\d+)_(\d+)tons_(\d+)C_(\d+)p_(\d+)s_', 'tokens');
+        tok = regexp(filename, '(\w+_?\d+)_(\d+)tons_(\d+)C_(\d+)p_(\d+)s_', 'tokens');
         if (~isempty(tok))
             expt_name = tok{1}{1};
             nominal_load = str2double(tok{1}{2});
@@ -80,15 +93,24 @@ function [image1, image2, time, box1, box2, box3, metadata] ...
                       'NominalStrain', nominal_strain);
    
     % Read all the data and 
-    data = fscanf(fid, '%f, %f, %f, %f, %f, %f', [6 inf]);
+    if length(com) == 5
+        data = fscanf(fid, '%f, %f, %f, %f, %f, %f', [6 inf]);
+    elseif length(com) == 6
+        data = fscanf(fid, '%f, %f, %f, %f, %f, %f, %f', [7 inf]);
+    end
     fclose(fid);
     
     % put data into output arrays
     image1 = round(data(1,:));
     image2 = round(data(2,:));
     time = data(3,:);
-    box1 = data(4,:);
-    box2 = data(5,:);
-    box3 = data(6,:);
-    
+    if length(com) == 5
+        box1 = data(4,:);
+        box2 = data(5,:);
+        box3 = data(6,:);
+    elseif length(com) == 6
+        box1 = data(5,:);
+        box2 = data(6,:);
+        box3 = data(7,:);
+    end
 end
