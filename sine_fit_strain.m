@@ -127,14 +127,14 @@ function [nom_period, temperature, load,...
         time, fitted_data_top, '--r', time, fitted_data_bot, '--b');
     legend('Detrended Zn sample', 'Detrended Al_2O_3 standard');
     xlabel('Timestamp (s)')
-    ylabel('Displacment (px)')
+    ylabel('Strain')
     title(name);
    
     subplot(2,1,2)
     plot(time, resid_top, '.r', time, resid_bot, '.b', ...
         time, zeros(size(time)), '-k');
     xlabel('Timestamp (s)')
-    ylabel('Normalised residual')
+    ylabel('Normalised residual (fraction of modelled amplitude')
     
     figure
     subplot(2,1,1)
@@ -142,14 +142,14 @@ function [nom_period, temperature, load,...
         unused_time, unused_top_strain, 'or');
     legend('Zn sample data', 'Background');
     xlabel('Timestamp (s)')
-    ylabel('Displacment (px)')
+    ylabel('Strain')
     
     subplot(2,1,2)
     plot(time, bot_strain, '.b', time, bg_bot, '-b',...
         unused_time, unused_bot_strain, 'ob');
     legend('Al2O3 sample data', 'Background');
     xlabel('Timestamp (s)')
-    ylabel('Displacment (px)')
+    ylabel('Strain')
     
     if 0
     E_al2o3 = 350; % Youngs mod of elastic standard (Al2O3)
