@@ -58,7 +58,7 @@ function [image1, image2, time, box1, box2, box3, metadata] ...
         rights = [str2double(tok{1}{1}) str2double(tok{1}{2}) str2double(tok{1}{3})];
     end
     
-    tok = regexp(filename, '(\w+_?\d+)_(\d+)tons_(\d+)C_(\d+)s_', 'tokens');
+    tok = regexp(filename, '(\w+_?\d+)_(\d+)tons?_(\d+)C_(\d+)s_', 'tokens');
     if (~isempty(tok))
         expt_name = tok{1}{1};
         nominal_load = str2double(tok{1}{2});
@@ -66,7 +66,7 @@ function [image1, image2, time, box1, box2, box3, metadata] ...
         nominal_period = str2double(tok{1}{4});
         nominal_strain = 0.0;
     else
-        tok = regexp(filename, '(\w+_?\d+)_(\d+)tons_(\d+)C_(\d+)p_(\d+)s_', 'tokens');
+        tok = regexp(filename, '(\w+_?\d+)_(\d+)tons?_(\d+)C_(\d+)p_(\d+)s_', 'tokens');
         if (~isempty(tok))
             expt_name = tok{1}{1};
             nominal_load = str2double(tok{1}{2});
@@ -78,7 +78,7 @@ function [image1, image2, time, box1, box2, box3, metadata] ...
             expt_name = filename;
             nominal_load = NaN;
             nominal_temperature = NaN;
-            nominal_period = 30;
+            nominal_period = NaN;
             nominal_strain = NaN;
         end
     end
