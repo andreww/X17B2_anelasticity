@@ -1,7 +1,7 @@
 % FIT_MAXWELL_MODEL - viscoelastic model
 % 
 % Fits a visco-elastic maxwell model to strain data for a standard (with
-% known Young's modulus) in mechanica, serise with a sample. Returns the
+% known Young's modulus) in mechanical serise with a sample. Returns the
 % estimated Young's modulus and viscosity of the sample.
 % 
 % Usage: [maxwell_E, maxwell_nu] = fit_maxwell_model(time, ...
