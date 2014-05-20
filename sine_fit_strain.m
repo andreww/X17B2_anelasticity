@@ -33,7 +33,8 @@
 % Andrew Walker <a.walker@leeds.ac.uk> - 20/5/2014
 
 function [nom_period, temperature, load,...
-    normalised_compliance, internal_friction] ...
+    normalised_compliance, internal_friction, normalised_compliance_se, ...
+    internal_friction_se] ...
     = sine_fit_strain(filename, varargin)
 
     % Set defaults for options. 
@@ -150,16 +151,58 @@ function [nom_period, temperature, load,...
     phase_bot = sine_coef_both(5);
     fprintf(['Joint fit: period = %6.4f \n' ...
         '    amplitude top = %6.4e phase top = %6.4f\n'...
-        '    amplitude bot = %6.4e phase bot = %6.4f\n'], ...
+        '    amplitude bot = %6.4e phase bot = %6.4f\n\n'], ...
         period, amplitude_top, phase_top, amplitude_bot, phase_bot);
-    
-    
+  
     period_error = 0;
     if ((abs(nom_period - period)/period) > 0.01)
         fprintf (['Nominal period, %6.4f, and fitted' ...
                   ' period, %6.4f, differ by > 1\%'], nom_period, period);
-        period_error = 1;    
-    end 
+        period_error = 1;
+    end
+    
+    
+    % Now estimate the errors on the parameters - see 
+    % http://www.mathworks.co.uk/matlabcentral/newsreader/view_thread/157530
+    % and links therein. Note that this bit needs the Adaptive Robust
+    % Derivative toolbox to estimate the Jacobian. See:
+    % http://www.mathworks.com/matlabcentral/fileexchange/13490-adaptive-robust-numerical-differentiation#
+    % Also note that we do this twice to get errors on the standard and sample, seperatly.
+    % Should probably do the calculation on the joint model - but how many 
+    % degrees of freedom for this?
+    dof = numel(time) - 2; %  Degrees of freedom
+    % Sine func
+    sine_predict = @(coeff) sine_model(time, coeff(1), coeff(2), coeff(3));
+    % standard deviation of the residuals - top
+    sdr = sqrt(sum((detrend_top - sine_model(time, period, ...
+        amplitude_top, phase_top)).^2)/dof);
+    % jacobian matrix
+    J = jacobianest(sine_predict,[period, ...
+        amplitude_top, phase_top]);
+    % Get the errors
+    Sigma = sdr^2*inv(J'*J);
+    se = sqrt(diag(Sigma))';
+    se_period_top = se(1);
+    se_amplitude_top = se(2);
+    se_phase_top = se(3);
+    % standard deviation of the residuals - bottome
+    sdr = sqrt(sum((detrend_bot - sine_model(time, period, ...
+        amplitude_bot, phase_bot)).^2)/dof);
+    % jacobian matrix
+    J = jacobianest(sine_predict,[period, ...
+        amplitude_bot, phase_bot]);
+    % Get the errors
+    Sigma = sdr^2*inv(J'*J);
+    se = sqrt(diag(Sigma))';
+    se_period_bot = se(1);
+    se_amplitude_bot = se(2);
+    se_phase_bot = se(3);
+    % Bit of a hack
+    se_period = (se_period_top + se_period_bot) / 2.0;
+    fprintf(['Estimated standard errors on parameters: \nperiod = %6.4f \n' ...
+        '    amplitude top = %6.4e phase top = %6.4f\n'...
+        '    amplitude bot = %6.4e phase bot = %6.4f\n'], ...
+        se_period, se_amplitude_top, se_phase_top, se_amplitude_bot, se_phase_bot);
     
     % Draw a graph
     
@@ -211,7 +254,11 @@ function [nom_period, temperature, load,...
     end    
 
     normalised_compliance = amplitude_top / amplitude_bot;
+    normalised_compliance_se = (sqrt((se_amplitude_top/amplitude_top)^2 + ...
+        (se_amplitude_bot/amplitude_bot)^2)) * normalised_compliance;
     internal_friction = (abs(phase_bot - phase_top)/period)*(2.0*pi);
+    internal_friction_se = (sqrt((abs(se_phase_top + se_phase_bot))/(abs(phase_bot - phase_top))^2 + ...
+        (se_period/period)^2)) * internal_friction;
     if (internal_friction < 0)
         % Something went wrong - elastic should not lag viscoelastic
         fprintf(['Calculated phase offset, %6.4f' ...
@@ -292,6 +339,7 @@ function [sum_sq] = sine_misfit(coeff, times, data)
     sum_sq = sum((sine_model(times, period, amplitude, phase) - data).^2);
 
 end
+
 
 function [background_sine_data] = background_sine_model(times, period, ...
                                     amplitude, phase, a, b, c)
