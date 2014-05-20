@@ -13,7 +13,7 @@ function plot_sine_fit(file)
 
     [p, t, f, s, phi] = read_sine_fit(file);
 
-    plot_force = [25 60];
+    plot_force = unique(f);
     plot_periods = [10 30 100 300];
     period_point = {'ok' 'ob' 'og' 'or'};
 

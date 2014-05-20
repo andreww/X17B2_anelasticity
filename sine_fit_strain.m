@@ -1,12 +1,59 @@
+% SINE_FIT_STRAIN
+%
+% Analysis of X17B2 anelasticity experiments. Given a 
+% 'position change' file (from Simon's code) containing 
+% the length of a standard and a sample, calculate 
+% the strains on both and attempt to extract the 
+% phase lag and strain amplitude ratio (the internal 
+% friction and normalised compliance, respectivly). The 
+% approach is to first detrend the data and then fit the 
+% phase, period and amplitude in sequence for the sample
+% and standard. A global fit (with common period) is then 
+% performed before the data is plotted and returned.
+% Options to vary the way the data is read and processed
+% are avalable.
+%
+% Arguments: 
+%     filename: the filename (or path and filename) or the 
+%               'positions change file.
+%
+% Options:
+%     optim_options: set options for the optimiser. Default is 
+%                    optimset('Display', 'final', 'TolX', 1e-9, ...
+%                    'Tolfun', 1e-9)
+%     trim_data: remove a fraction of the data from the start of the 
+%                time serise. e.g. (..., 'trim_data', 0.1) strips out 
+%                the first 10% of the data serise.
+% 
+% See also: run_sine_fit, plot_sine_fit
 
+% Andrew Walker <a.walker@leeds.ac.uk> - 20/5/2014
 
 function [nom_period, temperature, load,...
     normalised_compliance, internal_friction] ...
-    = sine_fit_strain(filename)
+    = sine_fit_strain(filename, varargin)
 
-    % Options - FIXME: should be optional input arguments. 
-    minimise_options = optimset('Display', 'final', 'TolX', 1e-9, 'Tolfun', 1e-9);
-
+    % Set defaults for options. 
+    minimise_options = optimset('Display', 'final', 'TolX', 1e-9, ...
+        'Tolfun', 1e-9);
+    trim_data = 0.0;
+    
+    % Process the optional arguments overiding defaults
+    iarg = 1 ;
+    while iarg <= (length(varargin))
+        switch lower(varargin{iarg})
+            case 'optim_opts'
+                minimise_options = varargin{iarg+1};
+                iarg = iarg + 2;
+            case 'trim_data'
+                trim_data = varargin{iarg+1};
+                iarg = iarg + 2;
+            otherwise
+                error(['Unknown option: ' varargin{iarg}]) ;
+        end
+    end
+    
+    
     % first read the data file
     [~, ~, time, box1, box2, box3, metadata] ...
         = read_position_change(filename);
@@ -35,16 +82,18 @@ function [nom_period, temperature, load,...
     top_strain = (box2 - box1) / top_ref_length;
     bot_strain = (box3 - box2) / bot_ref_length;
 
-    if 0
-    % Throw out first 10% of the data
-    s = floor(numel(time)/10);
-    e = numel(time);
-    unused_time = time(1:s-1);
-    unused_top_strain = top_strain(1:s-1);
-    unused_bot_strain = bot_strain(1:s-1);
-    time = time(s:e);
-    top_strain = top_strain(s:e);
-    bot_strain = bot_strain(s:e);
+    % Optionally throw out data from the start, e.g. where the first
+    % cycle is bad. We can plot this up (distinctivly) but we do not
+    % use it for fitting.
+    if trim_data ~= 0.0
+        s = floor(numel(time)*trim_data);
+        e = numel(time);
+        unused_time = time(1:s-1);
+        unused_top_strain = top_strain(1:s-1);
+        unused_bot_strain = bot_strain(1:s-1);
+        time = time(s:e);
+        top_strain = top_strain(s:e);
+        bot_strain = bot_strain(s:e);
     else
         unused_time = [];
         unused_top_strain = [];
@@ -52,9 +101,9 @@ function [nom_period, temperature, load,...
     end
     
     % Detrend the data and calculate detrended strains
-    [detrend_top, bg_top, ~] = detrend_data(time, top_strain, 'verbose', ...
+    [detrend_top, bg_top, ~] = detrend_data(time, top_strain, 'verbose',...
         'minimise_options', minimise_options, 'name', 'top data');
-    [detrend_bot, bg_bot, ~] = detrend_data(time, bot_strain, 'verbose', ...
+    [detrend_bot, bg_bot, ~] = detrend_data(time, bot_strain, 'verbose',...
         'minimise_options', minimise_options, 'name', 'bottom data');
     
     % Guess amplitudes
@@ -68,27 +117,14 @@ function [nom_period, temperature, load,...
         bot_nom_amp);
     
     % Fit sine coeffs for two models allowing different periods...
-    % FIXME - again this should be a function
-    sine_coef_top = fminsearch(@sine_misfit, [nom_period top_nom_amp top_nom_phase], ...
-        minimise_options, time, detrend_top);
-    sine_top = sine_model(time, sine_coef_top(1), sine_coef_top(2),...
-        sine_coef_top(3));
-    period_top = sine_coef_top(1);
-    amplitude_top = sine_coef_top(2);
-    phase_top = sine_coef_top(3);
-    fprintf(['Sine fit for top data: period = %6.4f amplitude = %6.4f' ...
-        ' phase = %6.4f\n'], period_top, amplitude_top, phase_top);
+    [period_top, amplitude_top, phase_top, sine_top] = ...
+        fit_single_serise(nom_period, top_nom_amp, top_nom_phase,...
+        minimise_options, time, detrend_top, 'top');
+
+    [period_bot, amplitude_bot, phase_bot, sine_bot] = ...
+        fit_single_serise(nom_period, bot_nom_amp, bot_nom_phase,...
+        minimise_options, time, detrend_bot, 'bottom');
     
-    
-    sine_coef_bot = fminsearch(@sine_misfit, [nom_period bot_nom_amp bot_nom_phase], ...
-        minimise_options, time, detrend_bot);
-    sine_bot = sine_model(time, sine_coef_bot(1), sine_coef_bot(2),...
-       sine_coef_bot(3));
-    period_bot = sine_coef_bot(1);
-    amplitude_bot = sine_coef_bot(2);
-    phase_bot = sine_coef_bot(3);
-    fprintf(['Sine fit for bottom data: period = %6.4f amplitude = %6.4f' ...
-        ' phase = %6.4f\n'], period_bot, amplitude_bot, phase_bot);
     
     % Now use theset to do a joint fit
     sine_coef_both = fminsearch(@model_misfit_both, ...
@@ -106,10 +142,11 @@ function [nom_period, temperature, load,...
         '    amplitude bot = %6.4e phase bot = %6.4f\n'], ...
         period, amplitude_top, phase_top, amplitude_bot, phase_bot);
     
+    
     period_error = 0;
     if ((abs(nom_period - period)/period) > 0.01)
-%         warning('SF:PD', ['Nominal period, %6.4f, and fitted'
-%             ' period, %6.4f, differ by > 1\%'], nom_period, period);
+        fprintf (['Nominal period, %6.4f, and fitted' ...
+                  ' period, %6.4f, differ by > 1\%'], nom_period, period);
         period_error = 1;    
     end 
     
@@ -131,22 +168,22 @@ function [nom_period, temperature, load,...
     title(name);
    
     subplot(2,1,2)
-    plot(time, resid_top, '.r', time, resid_bot, '.b', ...
+    plot(time, resid_top, '+r', time, resid_bot, '+b', ...
         time, zeros(size(time)), '-k');
     xlabel('Timestamp (s)')
     ylabel('Normalised residual (fraction of modelled amplitude')
     
     figure
     subplot(2,1,1)
-    plot(time, top_strain, '.r', time, bg_top, '-r', ...
-        unused_time, unused_top_strain, 'or');
+    plot(time, top_strain, 'or', time, bg_top, '-r', ...
+        unused_time, unused_top_strain, '+r');
     legend('Zn sample data', 'Background');
     xlabel('Timestamp (s)')
     ylabel('Strain')
     
     subplot(2,1,2)
-    plot(time, bot_strain, '.b', time, bg_bot, '-b',...
-        unused_time, unused_bot_strain, 'ob');
+    plot(time, bot_strain, 'ob', time, bg_bot, '-b',...
+        unused_time, unused_bot_strain, '+b');
     legend('Al2O3 sample data', 'Background');
     xlabel('Timestamp (s)')
     ylabel('Strain')
@@ -162,14 +199,14 @@ function [nom_period, temperature, load,...
     internal_friction = (abs(phase_bot - phase_top)/period)*(2.0*pi);
     if (internal_friction < 0)
         % Something went wrong - elastic should not lag viscoelastic
-        %warning('SF:NP', ['Calculated phase offset, %6.4f'
-        %    ' is negative'], internal_friction);
+        fprintf(['Calculated phase offset, %6.4f' ...
+            ' is negative'], internal_friction);
         internal_friction = NaN;
         normalised_compliance = NaN;
     elseif (internal_friction > pi/2.0)
         % Something went wrong - maximum lag (pure viscosity) is 90 degrees
-        %warning('SF:BP', ['Calculated phase offset, %6.4f'
-        %    ' is more than 90 degrees'], internal_friction);
+        fprintf(['Calculated phase offset, %6.4f' ...
+            ' is more than 90 degrees'], internal_friction);
         internal_friction = NaN;
         normalised_compliance = NaN;
     elseif (period_error)
@@ -248,6 +285,23 @@ function [background_sine_data] = background_sine_model(times, period, ...
         phase) + background_model(times, a, b, c);
     
 end
+
+
+function [period, amplitude, phase, fitted_data] = fit_single_serise(...
+             nom_period, nom_amp, nom_phase, minimise_options, time, ...
+             detrend_data, string)
+
+    sine_coef_top = fminsearch(@sine_misfit, [nom_period nom_amp nom_phase], ...
+        minimise_options, time, detrend_data);
+    fitted_data = sine_model(time, sine_coef_top(1), sine_coef_top(2),...
+        sine_coef_top(3));
+    period = sine_coef_top(1);
+    amplitude = sine_coef_top(2);
+    phase = sine_coef_top(3);
+    fprintf(['Sine fit for %s data: period = %6.4f amplitude = %6.4f' ...
+        ' phase = %6.4f\n'], string, period, amplitude, phase);
+end
+
 
 function [ sine_data ] = sine_model (times, period, amplitude, phase)
 
