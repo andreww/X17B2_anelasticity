@@ -21,9 +21,12 @@
 %     optim_options: set options for the optimiser. Default is 
 %                    optimset('Display', 'final', 'TolX', 1e-9, ...
 %                    'Tolfun', 1e-9)
-%     trim_data: remove a fraction of the data from the start of the 
-%                time serise. e.g. (..., 'trim_data', 0.1) strips out 
+%     trim_data_start: remove a fraction of the data from the start of the 
+%                time serise. e.g. (..., 'trim_data_start', 0.1) strips out 
 %                the first 10% of the data serise.
+%     trim_data_end: remove a fraction of the data from the end of the 
+%                time serise. e.g. (..., 'trim_data_end', 0.1) strips out 
+%                the last 10% of the data serise.
 % 
 % See also: run_sine_fit, plot_sine_fit
 
@@ -36,7 +39,12 @@ function [nom_period, temperature, load,...
     % Set defaults for options. 
     minimise_options = optimset('Display', 'final', 'TolX', 1e-9, ...
         'Tolfun', 1e-9);
-    trim_data = 0.0;
+    trim_data_start = 0.0;
+    trim_data_end = 0.0;
+    
+    ScreenSize = get(0,'ScreenSize');
+    fig_width = ScreenSize(3)/2;
+    fig_height = ScreenSize(4)/2;
     
     % Process the optional arguments overiding defaults
     iarg = 1 ;
@@ -45,8 +53,11 @@ function [nom_period, temperature, load,...
             case 'optim_opts'
                 minimise_options = varargin{iarg+1};
                 iarg = iarg + 2;
-            case 'trim_data'
-                trim_data = varargin{iarg+1};
+            case 'trim_data_start'
+                trim_data_start = varargin{iarg+1};
+                iarg = iarg + 2;
+            case 'trim_data_end'
+                trim_data_end = varargin{iarg+1};
                 iarg = iarg + 2;
             otherwise
                 error(['Unknown option: ' varargin{iarg}]) ;
@@ -85,12 +96,12 @@ function [nom_period, temperature, load,...
     % Optionally throw out data from the start, e.g. where the first
     % cycle is bad. We can plot this up (distinctivly) but we do not
     % use it for fitting.
-    if trim_data ~= 0.0
-        s = floor(numel(time)*trim_data);
-        e = numel(time);
-        unused_time = time(1:s-1);
-        unused_top_strain = top_strain(1:s-1);
-        unused_bot_strain = bot_strain(1:s-1);
+    if (trim_data_start + trim_data_end ~= 0.0)
+        s = floor(numel(time).*trim_data_start);
+        e = numel(time) - floor(numel(time)*trim_data_end);
+        unused_time = [time(1:s-1) time(e+1:numel(time))];
+        unused_top_strain = [top_strain(1:s-1) top_strain(e+1:numel(time))];
+        unused_bot_strain = [bot_strain(1:s-1) bot_strain(e+1:numel(time))];
         time = time(s:e);
         top_strain = top_strain(s:e);
         bot_strain = bot_strain(s:e);
@@ -157,11 +168,13 @@ function [nom_period, temperature, load,...
     resid_top = (detrend_top - fitted_data_top)./amplitude_top;
     resid_bot = (detrend_bot - fitted_data_bot)./amplitude_bot;
     
-    figure
+    fig1 = figure;
+    set(fig1, 'OuterPosition', [1, fig_height, fig_width, fig_height]);
     subplot(2,1,1)
     plot(time, detrend_top, 'or', time, detrend_bot, 'ob', ...
         time, sine_top, ':r', time, sine_bot, ':b', ...
         time, fitted_data_top, '--r', time, fitted_data_bot, '--b');
+    xlim([min(time) max(time)])
     legend('Detrended Zn sample', 'Detrended Al_2O_3 standard');
     xlabel('Timestamp (s)')
     ylabel('Strain')
@@ -170,10 +183,12 @@ function [nom_period, temperature, load,...
     subplot(2,1,2)
     plot(time, resid_top, '+r', time, resid_bot, '+b', ...
         time, zeros(size(time)), '-k');
+    xlim([min(time) max(time)])
     xlabel('Timestamp (s)')
     ylabel('Normalised residual (fraction of modelled amplitude')
     
-    figure
+    fig2 = figure;
+    set(fig2, 'OuterPosition', [fig_width, fig_height, fig_width, fig_height]);
     subplot(2,1,1)
     plot(time, top_strain, 'or', time, bg_top, '-r', ...
         unused_time, unused_top_strain, '+r');
