@@ -155,9 +155,9 @@ function [nom_period, temperature, load,...
         period, amplitude_top, phase_top, amplitude_bot, phase_bot);
   
     period_error = 0;
-    if ((abs(nom_period - period)/period) > 0.01)
+    if ((abs(nom_period - period)/period) > 0.02)
         fprintf (['Nominal period, %6.4f, and fitted' ...
-                  ' period, %6.4f, differ by > 1\%'], nom_period, period);
+                  ' period, %6.4f, differ by > 2 percent'], nom_period, period);
         period_error = 1;
     end
     
