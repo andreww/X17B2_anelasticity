@@ -11,7 +11,7 @@
 
 function plot_sine_fit(file)
 
-    [p, t, f, s, phi] = read_sine_fit(file);
+    [p, t, f, s, phi, s_se, phi_se] = read_sine_fit(file);
 
     plot_force = unique(f);
     plot_periods = [10 30 100 300];
@@ -24,6 +24,9 @@ function plot_sine_fit(file)
             plot(t(f==plot_force(i)&p==plot_periods(j)), ...
                 s(f==plot_force(i)&p==plot_periods(j)), ...
                 period_point{j})
+            errorbar(t(f==plot_force(i)&p==plot_periods(j)), ...
+                s(f==plot_force(i)&p==plot_periods(j)), ...
+                s_se(f==plot_force(i)&p==plot_periods(j)))
             hold on;
         end
         xlabel('Temperature (C)')
@@ -35,6 +38,9 @@ function plot_sine_fit(file)
             plot(t(f==plot_force(i)&p==plot_periods(j)), ...
                 phi(f==plot_force(i)&p==plot_periods(j)), ...
                 period_point{j})
+            errorbar(t(f==plot_force(i)&p==plot_periods(j)), ...
+                phi(f==plot_force(i)&p==plot_periods(j)), ...
+                phi_se(f==plot_force(i)&p==plot_periods(j)))
             hold on
         end
         xlabel('Temperature (C)')

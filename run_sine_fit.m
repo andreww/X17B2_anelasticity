@@ -18,11 +18,14 @@ function [p, t, f, s, phi] = run_sine_fit(fileglob)
     f = zeros(size(files));
     s = zeros(size(files));
     phi = zeros(size(files));
-
+    s_se = zeros(size(files));
+    phi_se = zeros(size(files));
+    
     fh = fopen('SineFits.txt', 'w');
 
     for i=1:size(files)
-        [p(i), t(i), f(i), s(i), phi(i)] = sine_fit_strain(files(i).name);
+        [p(i), t(i), f(i), s(i), phi(i), s_se(i), phi_se(i)]...
+            = sine_fit_strain(files(i).name);
         status = check_fit_ok;
         while status == 2
             prompt = {'Fraction to remove at start:',...
@@ -34,7 +37,8 @@ function [p, t, f, s, phi] = run_sine_fit(fileglob)
             strip_start = str2double(answer{1});
             strip_end = str2double(answer{2});
             close all
-            [p(i), t(i), f(i), s(i), phi(i)] = sine_fit_strain(...
+            [p(i), t(i), f(i), s(i), phi(i), s_se(i), phi_se(i)]...
+                = sine_fit_strain(...
                 files(i).name, 'trim_data_start', strip_start,...
                 'trim_data_end', strip_end);
             status = check_fit_ok;
@@ -47,7 +51,8 @@ function [p, t, f, s, phi] = run_sine_fit(fileglob)
             print('-dpng', fn1)
             figure(2)
             print('-dpng', fn2)
-            fprintf(fh, '%9.7f %9.7f %9.7f %9.7f %9.7f\n', p(i), t(i), f(i), s(i), phi(i));
+            fprintf(fh, '%9.7f %9.7f %9.7f %9.7f %9.7f %9.7f %9.7f\n', ...
+                p(i), t(i), f(i), s(i), phi(i), s_se(i), phi_se(i));
         end
         close all
     end
