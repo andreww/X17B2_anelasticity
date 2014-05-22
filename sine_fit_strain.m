@@ -98,7 +98,7 @@ function [nom_period, temperature, load,...
     % cycle is bad. We can plot this up (distinctivly) but we do not
     % use it for fitting.
     if (trim_data_start + trim_data_end ~= 0.0)
-        s = floor(numel(time).*trim_data_start);
+        s = 1 + floor(numel(time).*trim_data_start);
         e = numel(time) - floor(numel(time)*trim_data_end);
         unused_time = [time(1:s-1) time(e+1:numel(time))];
         unused_top_strain = [top_strain(1:s-1) top_strain(e+1:numel(time))];
@@ -256,9 +256,22 @@ function [nom_period, temperature, load,...
     normalised_compliance = amplitude_top / amplitude_bot;
     normalised_compliance_se = (sqrt((se_amplitude_top/amplitude_top)^2 + ...
         (se_amplitude_bot/amplitude_bot)^2)) * normalised_compliance;
-    internal_friction = (abs(phase_bot - phase_top)/period)*(2.0*pi);
-    internal_friction_se = (sqrt((abs(se_phase_top + se_phase_bot))/(abs(phase_bot - phase_top))^2 + ...
-        (se_period/period)^2)) * internal_friction;
+    
+    phase_bot_frac = (phase_bot/period);
+    phase_bot_rad = phase_bot_frac*(2.0*pi);
+    phase_bot_frac_se = sqrt ( phase_bot_frac^2 * ( ...
+        (se_phase_bot/phase_bot)^2+(se_period/period)^2 ) );
+    phase_bot_rad_se = sqrt( phase_bot_frac_se^2 * (2.0*pi)^2);
+  
+    phase_top_frac = (phase_top/period);
+    phase_top_rad = phase_top_frac*(2.0*pi);
+    phase_top_frac_se = sqrt ( phase_top_frac^2 * ( ...
+        (se_phase_top/phase_top)^2+(se_period/period)^2 ) );
+    phase_top_rad_se = sqrt( phase_top_frac_se^2 * (2.0*pi)^2);
+    
+    internal_friction = abs(phase_bot_rad - phase_top_rad);
+    internal_friction_se = sqrt(phase_bot_rad_se^2 + phase_top_rad_se^2);
+    
     if (internal_friction < 0)
         % Something went wrong - elastic should not lag viscoelastic
         fprintf(['Calculated phase offset, %6.4f' ...
@@ -276,6 +289,10 @@ function [nom_period, temperature, load,...
         normalised_compliance = NaN;
     end
     
+    fprintf(['\nNormalised compliance = %6.4f (s.e. = %6.4f) \n' ...
+        'Internal friction = %6.4f (s.e. = %6.4f) rad\n'] , ...
+        normalised_compliance, normalised_compliance_se, ...
+        internal_friction, internal_friction_se);
     
 end
 
@@ -368,7 +385,7 @@ end
 
 function [ sine_data ] = sine_model (times, period, amplitude, phase)
 
-    % phase and period in degrees, amp in px, times in seconds
+    % phase and period in seconds, amp in px, times in seconds
     sine_data = sin(((times + phase)/period)*(2.0*pi)) * amplitude;
     
 end
