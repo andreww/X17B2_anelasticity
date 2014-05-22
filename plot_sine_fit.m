@@ -13,6 +13,8 @@ function plot_sine_fit(file)
 
     [p, t, f, s, phi, s_se, phi_se] = read_sine_fit(file);
 
+    phi_se = sqrt((phi_se ./ (2.0*pi)).^2 .*(2.0*pi));
+    
     plot_force = unique(f);
     plot_periods = [10 30 100 300];
     period_point = {'ok' 'ob' 'og' 'or'};
@@ -21,12 +23,9 @@ function plot_sine_fit(file)
         figure
         subplot(2,1,1);
         for j = 1:length(plot_periods)
-            plot(t(f==plot_force(i)&p==plot_periods(j)), ...
-                s(f==plot_force(i)&p==plot_periods(j)), ...
-                period_point{j})
             errorbar(t(f==plot_force(i)&p==plot_periods(j)), ...
                 s(f==plot_force(i)&p==plot_periods(j)), ...
-                s_se(f==plot_force(i)&p==plot_periods(j)))
+                s_se(f==plot_force(i)&p==plot_periods(j)), period_point{j})
             hold on;
         end
         xlabel('Temperature (C)')
@@ -35,12 +34,9 @@ function plot_sine_fit(file)
         hold off;
         subplot(2,1,2);
         for j = 1:length(plot_periods)
-            plot(t(f==plot_force(i)&p==plot_periods(j)), ...
-                phi(f==plot_force(i)&p==plot_periods(j)), ...
-                period_point{j})
             errorbar(t(f==plot_force(i)&p==plot_periods(j)), ...
                 phi(f==plot_force(i)&p==plot_periods(j)), ...
-                phi_se(f==plot_force(i)&p==plot_periods(j)))
+                phi_se(f==plot_force(i)&p==plot_periods(j)), period_point{j})
             hold on
         end
         xlabel('Temperature (C)')
