@@ -74,12 +74,21 @@ function [image1, image2, time, box1, box2, box3, metadata] ...
             nominal_period = str2double(tok{1}{5});
             nominal_strain = str2double(tok{1}{4});
         else
-            % Cannot parse file name!
-            expt_name = filename;
-            nominal_load = NaN;
-            nominal_temperature = NaN;
-            nominal_period = NaN;
-            nominal_strain = NaN;
+            tok = regexp(filename, '(\w+_?\d+)_(\d+)tons?_ramping_(\d+)s_', 'tokens');
+            if (~isempty(tok))
+                expt_name = tok{1}{1};
+                nominal_load = str2double(tok{1}{2});
+                nominal_temperature = NaN;
+                nominal_period = str2double(tok{1}{3});
+                nominal_strain = 0.0;
+            else
+                % Cannot parse file name!
+                expt_name = filename;
+                nominal_load = NaN;
+                nominal_temperature = NaN;
+                nominal_period = NaN;
+                nominal_strain = NaN;
+            end
         end
     end
     metadata = struct('InputFile', in_file_line, ...
