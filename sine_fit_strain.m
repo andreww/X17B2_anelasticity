@@ -66,29 +66,39 @@ function [nom_period, temperature, load,...
     end
     
     
-    % first read the data file
-    [~, ~, time, box1, box2, box3, metadata] ...
-        = read_position_change(filename);
-    
-    time_zero = time(1);
-    time = time - time_zero;
-
+    % Read in the data and process it so we can make use.
+    [foil_change_data, time, box_positions, number_boxes, ...
+       number_images] = ReadPositionChangeFile(filename);
+    [metadata] = read_position_change_metadata(filename);
+   
     [~, name, ~] = fileparts(filename);
     name = strrep(name, '_', ' ');
+   
+    time_zero = time(1);
+    time = time - time_zero;
     
-    % Lengths of top and bottom samples in first image 
-    % FIXME: ask Simon why this is calculated this way.
-    top_ref_length = (metadata.BoxTops(1)+metadata.BoxBotoms(1))/2.0 + ...
-                     (metadata.BoxTops(2)+metadata.BoxBotoms(2))/2.0;               
-    bot_ref_length = (metadata.BoxTops(2)+metadata.BoxBotoms(2))/2.0 + ...
-                     (metadata.BoxTops(3)+metadata.BoxBotoms(3))/2.0;
-                 
+    top_ref_length = (box_positions(1,1)+box_positions(1,2))/2.0 + ...
+        (box_positions(2,1)+box_positions(2,2))/2.0 ;
+    bot_ref_length = (box_positions(2,1)+box_positions(2,2))/2.0 + ...
+        (box_positions(3,1)+box_positions(3,2))/2.0 ;
+    
+    box1 = foil_change_data(:,1);
+    box2 = foil_change_data(:,2);
+    box3 = foil_change_data(:,3);
+    
+    % Switch the data around to agree with the rest of the script.
+    time = time';
+    box1 = box1';
+    box2 = box2';
+    box3 = box3';
+    
     % Get the nominal period for fitting with
     nom_period = metadata.NominalPeriod;
     assert(nom_period > 0, 'Error, nomimal period must be positive');
               
     temperature = metadata.NominalTemp;
     load = metadata.NominalLoad;
+   
     
     % Calculate strain of top and bottom block, at each time step.             
     top_strain = (box2 - box1) / top_ref_length;
