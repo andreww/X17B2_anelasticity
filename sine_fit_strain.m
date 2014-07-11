@@ -27,6 +27,13 @@
 %     trim_data_end: remove a fraction of the data from the end of the 
 %                time serise. e.g. (..., 'trim_data_end', 0.1) strips out 
 %                the last 10% of the data serise.
+%
+%     mode: set a method for measuring strain. Options are 'ES-', '-SE',
+%                'ESE', 'E-S', 'S-E', 'SE', 'ES'. Number of characters 
+%                must be one larger than the number of foils in the file.
+%                E is elastic standard, S is the sample, '-' ignores one
+%                element. If two E's are present the lengths are added 
+%                before calculating the strain.
 % 
 % See also: run_sine_fit, plot_sine_fit
 
@@ -42,6 +49,7 @@ function [nom_period, temperature, load,...
         'Tolfun', 1e-9);
     trim_data_start = 0.0;
     trim_data_end = 0.0;
+    strain_mode = 'default';
     
     ScreenSize = get(0,'ScreenSize');
     fig_width = ScreenSize(3)/2;
@@ -60,6 +68,9 @@ function [nom_period, temperature, load,...
             case 'trim_data_end'
                 trim_data_end = varargin{iarg+1};
                 iarg = iarg + 2;
+            case 'mode'
+                strain_mode = varargin{iarg+1};
+                iarg = iarg + 2;
             otherwise
                 error(['Unknown option: ' varargin{iarg}]) ;
         end
@@ -74,36 +85,86 @@ function [nom_period, temperature, load,...
     [~, name, ~] = fileparts(filename);
     name = strrep(name, '_', ' ');
    
+    % Time should start at 0
     time_zero = time(1);
     time = time - time_zero;
     
-    top_ref_length = (box_positions(1,1)+box_positions(1,2))/2.0 + ...
-        (box_positions(2,1)+box_positions(2,2))/2.0 ;
-    bot_ref_length = (box_positions(2,1)+box_positions(2,2))/2.0 + ...
-        (box_positions(3,1)+box_positions(3,2))/2.0 ;
-    
-    box1 = foil_change_data(:,1);
-    box2 = foil_change_data(:,2);
-    box3 = foil_change_data(:,3);
-    
-    % Switch the data around to agree with the rest of the script.
-    time = time';
-    box1 = box1';
-    box2 = box2';
-    box3 = box3';
-    
+
     % Get the nominal period for fitting with
     nom_period = metadata.NominalPeriod;
     assert(nom_period > 0, 'Error, nomimal period must be positive');
               
     temperature = metadata.NominalTemp;
     load = metadata.NominalLoad;
-   
+ 
+    if strcmpi(strain_mode, 'default')
+        if number_boxes == 3
+            strain_mode = 'SE';
+        elseif number_boxes == 4
+            strain_mode = 'ESE';
+        else
+            error('Can only work with 3 or 4 foils!');
+        end  
+    end
+        
     
-    % Calculate strain of top and bottom block, at each time step.             
-    top_strain = (box2 - box1) / top_ref_length;
-    bot_strain = (box3 - box2) / bot_ref_length;
-
+    switch lower(strain_mode)
+        case 'es-'
+            std = [1 2];
+            sam = [2 3];
+        case '-se'
+            std = [3 4];
+            sam = [2 3];
+        case 'ese'
+            std = [1 2 3 4];
+            sam = [2 3];
+        case 'e-s'
+            std = [1 2];
+            sam = [3 4];
+        case 's-e'
+            std = [3 4];
+            sam = [1 2];
+        case 'se'
+            std = [2 3];
+            sam = [1 2];
+        case 'es'
+            std = [1 2];
+            sam = [2 3];
+        otherwise
+            error('Unkown mode argument')
+    end
+    
+    if length(std) == 4
+        
+        error('Not implemented')
+        
+    elseif length(std) == 2
+    
+    % pull out individual boxes...
+    %box1 = foil_change_data(:,1);
+    %box2 = foil_change_data(:,2);
+    %box3 = foil_change_data(:,3);
+    
+    % Switch the data around to agree with the rest of the script.
+    time = time';
+    %box1 = box1';
+    %box2 = box2';
+    %box3 = box3';
+    
+    % Calculate strain of top and bottom block, at each time step.
+    % For intresting historical reasons, bot_ is always the elastic 
+    % standard and top_ is always the sample.
+    top_ref_length = (box_positions(sam(1),1)+box_positions(sam(1),2))/2.0 + ...
+        (box_positions(sam(2),1)+box_positions(sam(2),2))/2.0 ;
+    bot_ref_length = (box_positions(std(1),1)+box_positions(std(1),2))/2.0 + ...
+        (box_positions(std(2),1)+box_positions(std(2),2))/2.0 ;
+    
+    top_strain = (foil_change_data(:,sam(2)) - foil_change_data(:,sam(1))) / top_ref_length;
+    top_strain = top_strain';
+    bot_strain = (foil_change_data(:,std(2)) - foil_change_data(:,std(1))) / bot_ref_length;
+    bot_strain = bot_strain';
+    end
+    
     % Optionally throw out data from the start, e.g. where the first
     % cycle is bad. We can plot this up (distinctivly) but we do not
     % use it for fitting.
