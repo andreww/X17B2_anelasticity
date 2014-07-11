@@ -136,34 +136,41 @@ function [nom_period, temperature, load,...
     
     if length(std) == 4
         
-        error('Not implemented')
+        % Calculate strain of top and bottom block, at each time step.
+        % For intresting historical reasons, bot_ is always the elastic
+        % standard and top_ is always the sample.
+        top_ref_length = (box_positions(sam(2),1)+box_positions(sam(2),2))/2.0 - ...
+            (box_positions(sam(1),1)+box_positions(sam(1),2))/2.0 ;
+        bot_ref_length_1 = (box_positions(std(2),1)+box_positions(std(2),2))/2.0 - ...
+            (box_positions(std(1),1)+box_positions(std(1),2))/2.0 ;
+        bot_ref_length_2 = (box_positions(std(2),1)+box_positions(std(2),2))/2.0 - ...
+            (box_positions(std(1),1)+box_positions(std(1),2))/2.0 ;
+        
+        top_strain = (foil_change_data(:,sam(2)) - foil_change_data(:,sam(1))) / top_ref_length;
+        
+        bot_strain = (((foil_change_data(:,std(2)) - foil_change_data(:,std(1))) / bot_ref_length_1) ...
+            + ((foil_change_data(:,std(4)) - foil_change_data(:,std(3))) / bot_ref_length_2)) / 2.0;
         
     elseif length(std) == 2
-    
-    % pull out individual boxes...
-    %box1 = foil_change_data(:,1);
-    %box2 = foil_change_data(:,2);
-    %box3 = foil_change_data(:,3);
+        
+        % Calculate strain of top and bottom block, at each time step.
+        % For intresting historical reasons, bot_ is always the elastic
+        % standard and top_ is always the sample.
+        top_ref_length = (box_positions(sam(2),1)+box_positions(sam(2),2))/2.0 - ...
+            (box_positions(sam(1),1)+box_positions(sam(1),2))/2.0 ;
+        bot_ref_length = (box_positions(std(2),1)+box_positions(std(2),2))/2.0 - ...
+            (box_positions(std(1),1)+box_positions(std(1),2))/2.0 ;
+        
+        top_strain = (foil_change_data(:,sam(2)) - foil_change_data(:,sam(1))) / top_ref_length;
+        
+        bot_strain = (foil_change_data(:,std(2)) - foil_change_data(:,std(1))) / bot_ref_length;
+        
+    end
     
     % Switch the data around to agree with the rest of the script.
     time = time';
-    %box1 = box1';
-    %box2 = box2';
-    %box3 = box3';
-    
-    % Calculate strain of top and bottom block, at each time step.
-    % For intresting historical reasons, bot_ is always the elastic 
-    % standard and top_ is always the sample.
-    top_ref_length = (box_positions(sam(1),1)+box_positions(sam(1),2))/2.0 + ...
-        (box_positions(sam(2),1)+box_positions(sam(2),2))/2.0 ;
-    bot_ref_length = (box_positions(std(1),1)+box_positions(std(1),2))/2.0 + ...
-        (box_positions(std(2),1)+box_positions(std(2),2))/2.0 ;
-    
-    top_strain = (foil_change_data(:,sam(2)) - foil_change_data(:,sam(1))) / top_ref_length;
     top_strain = top_strain';
-    bot_strain = (foil_change_data(:,std(2)) - foil_change_data(:,std(1))) / bot_ref_length;
     bot_strain = bot_strain';
-    end
     
     % Optionally throw out data from the start, e.g. where the first
     % cycle is bad. We can plot this up (distinctivly) but we do not
